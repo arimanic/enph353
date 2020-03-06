@@ -51,34 +51,35 @@ def main():
                 print("turning small L")
                 robot.motors.set_wheel_motors(36, 40)
 
-            elif(edge_right > 535):
+            elif(edge_right > 510):
                 print("turning small R")
                 robot.motors.set_wheel_motors(40, 36)
 
             else:
                 robot.motors.set_wheel_motors(40, 38)
 
+            print(turn)
             # TURN HARD RIGHT
             if(np.isnan(edge_right) and turn < 2):
                 # print("HARD TURN RIGHT")
                 robot.motors.set_wheel_motors(60,60)
                 time.sleep(1)
-                robot.motors.set_wheel_motors(45,-45)
+                robot.motors.set_wheel_motors(43,-43)
                 time.sleep(2)
                 robot.motors.set_wheel_motors(0,0)
                 time.sleep(1)
                 turn += 1   
 
             # TURN HARD LEFT
-            if(edge_right == 169.5 and turn >= 2):
-            #     print("HARD TURN LEFT")
+            elif(np.isnan(edge_right) and turn >= 2):
+            #    print("HARD TURN LEFT")
                 robot.motors.set_wheel_motors(0,0)
                 time.sleep(10)
-                # robot.motors.set_wheel_motors(60,60)
-                # time.sleep(1)
-                # robot.motors.set_wheel_motors(-40,40)
-                # time.sleep(2)
-                # turn += 1   
+                robot.motors.set_wheel_motors(60,60)
+                time.sleep(1)
+                robot.motors.set_wheel_motors(-40,40)
+                time.sleep(2)
+                turn += 1   
 
 
 if __name__ == "__main__":

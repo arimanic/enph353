@@ -42,40 +42,43 @@ def main():
             x,y = frame.shape
             # print("x: " + str(x) + "   y: " + str(y))
             grid = np.indices((1,y-300))
-            
-            edge_right = np.sum((255-frame[x-1,300:y])*grid[1])/np.sum((255-frame[x-1,300:y]))
+            grid = grid + 300
+
+            edge_right = np.sum((frame[x-1,300:y])*grid[1])/np.sum((frame[x-1,300:y]))
             print("edge: " + str(edge_right))
             
-            if(edge_right > y/2 - 165):
+            if(edge_right < 495):
                 print("turning small L")
                 robot.motors.set_wheel_motors(36, 40)
 
-            elif(edge_right < y/2 - 180):
+            elif(edge_right > 535):
                 print("turning small R")
                 robot.motors.set_wheel_motors(40, 36)
 
             else:
                 robot.motors.set_wheel_motors(40, 38)
 
-            # #TURN RIGHT
-            # if(edge_right == 319.5 and turn < 2):
-            #     # print("HARD TURN RIGHT")
-            #     robot.motors.set_wheel_motors(60,60)
-            #     time.sleep(1)
-            #     robot.motors.set_wheel_motors(40,-40)
-            #     time.sleep(2)
-            #     robot.motors.set_wheel_motors(0,0)
-            #     time.sleep(1)
-            #     turn += 1   
+            # TURN HARD RIGHT
+            if(np.isnan(edge_right) and turn < 2):
+                # print("HARD TURN RIGHT")
+                robot.motors.set_wheel_motors(60,60)
+                time.sleep(1)
+                robot.motors.set_wheel_motors(45,-45)
+                time.sleep(2)
+                robot.motors.set_wheel_motors(0,0)
+                time.sleep(1)
+                turn += 1   
 
-            # #TURN LEFT
-            # if(edge_right == 319.5 and turn >= 2):
+            # TURN HARD LEFT
+            if(edge_right == 169.5 and turn >= 2):
             #     print("HARD TURN LEFT")
-            #     robot.motors.set_wheel_motors(60,60)
-            #     time.sleep(1)
-            #     robot.motors.set_wheel_motors(-40,40)
-            #     time.sleep(2)
-            #     turn += 1   
+                robot.motors.set_wheel_motors(0,0)
+                time.sleep(10)
+                # robot.motors.set_wheel_motors(60,60)
+                # time.sleep(1)
+                # robot.motors.set_wheel_motors(-40,40)
+                # time.sleep(2)
+                # turn += 1   
 
 
 if __name__ == "__main__":

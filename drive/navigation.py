@@ -24,7 +24,6 @@ import cv2
 import numpy as np
 
 def main():
-    global turn
     turn = 0
     args = anki_vector.util.parse_command_args()
     with anki_vector.AsyncRobot(args.serial) as robot:
@@ -42,39 +41,41 @@ def main():
 
             x,y = frame.shape
             # print("x: " + str(x) + "   y: " + str(y))
-            grid = np.indices((1,y))
+            grid = np.indices((1,y-300))
             
-            edge_right = np.sum((255-frame[x-1,:])*grid[1])/np.sum((255-frame[x-1,:]))
+            edge_right = np.sum((255-frame[x-1,300:y])*grid[1])/np.sum((255-frame[x-1,300:y]))
             print("edge: " + str(edge_right))
             
-            if(edge_right > y/2 - 38):
+            if(edge_right > y/2 - 165):
                 print("turning small L")
                 robot.motors.set_wheel_motors(36, 40)
 
-            elif(edge_right < y/2 - 43):
+            elif(edge_right < y/2 - 180):
                 print("turning small R")
                 robot.motors.set_wheel_motors(40, 36)
 
             else:
                 robot.motors.set_wheel_motors(40, 38)
 
-            #TURN RIGHT
-            if(edge_right == 0 and turn < 2):
-                print("HARD TURN RIGHT")
-                robot.motors.set_wheel_motors(60,60)
-                time.sleep(1)
-                robot.motors.set_wheel_motors(40,-40)
-                time.sleep(2)
-                turn += 1   
+            # #TURN RIGHT
+            # if(edge_right == 319.5 and turn < 2):
+            #     # print("HARD TURN RIGHT")
+            #     robot.motors.set_wheel_motors(60,60)
+            #     time.sleep(1)
+            #     robot.motors.set_wheel_motors(40,-40)
+            #     time.sleep(2)
+            #     robot.motors.set_wheel_motors(0,0)
+            #     time.sleep(1)
+            #     turn += 1   
 
-            #TURN LEFT
-            if(edge_right == 319.5 and turn >= 2):
-                print("HARD TURN LEFT")
-                robot.motors.set_wheel_motors(60,60)
-                time.sleep(1)
-                robot.motors.set_wheel_motors(-40,40)
-                time.sleep(2)
-                turn += 1   
+            # #TURN LEFT
+            # if(edge_right == 319.5 and turn >= 2):
+            #     print("HARD TURN LEFT")
+            #     robot.motors.set_wheel_motors(60,60)
+            #     time.sleep(1)
+            #     robot.motors.set_wheel_motors(-40,40)
+            #     time.sleep(2)
+            #     turn += 1   
 
 
 if __name__ == "__main__":

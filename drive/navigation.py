@@ -26,18 +26,26 @@ import numpy as np
 def main():
     turn = 0
     args = anki_vector.util.parse_command_args()
+
     with anki_vector.AsyncRobot(args.serial) as robot:
         robot.behavior.set_head_angle(degrees(-7.0))
         robot.behavior.set_lift_height(1)
         robot.camera.init_camera_feed()
+        # robot.viewer.show()
+
+        robot.motors.set_wheel_motors(50, -50)
+        time.sleep(1)
+        robot.motors.set_wheel_motors(60,60)
+        time.sleep(1)
+        robot.motors.set_wheel_motors(-60,60)
+        time.sleep(1)
+        robot.motors.set_wheel_motors(40,40)
+        time.sleep(1)
 
         while True:
             img_pil = robot.camera.latest_image.raw_image
             img_live = cv2.cvtColor(np.array(img_pil), cv2.COLOR_BGR2GRAY)
-
             ret, frame = cv2.threshold(img_live, 240, 255, cv2.THRESH_BINARY)
-            cv2.imshow('blob', frame)
-            cv2.waitKey(1)
 
             x,y = frame.shape
             # print("x: " + str(x) + "   y: " + str(y))
@@ -45,7 +53,7 @@ def main():
             grid = grid + 300
 
             edge_right = np.sum((frame[x-1,300:y])*grid[1])/np.sum((frame[x-1,300:y]))
-            print("edge: " + str(edge_right))
+            # print("edge: " + str(edge_right))
             
             if(edge_right < 495):
                 print("turning small L")
@@ -58,28 +66,28 @@ def main():
             else:
                 robot.motors.set_wheel_motors(40, 38)
 
-            print(turn)
-            # TURN HARD RIGHT
-            if(np.isnan(edge_right) and turn < 2):
-                # print("HARD TURN RIGHT")
-                robot.motors.set_wheel_motors(60,60)
-                time.sleep(1)
-                robot.motors.set_wheel_motors(43,-43)
-                time.sleep(2)
-                robot.motors.set_wheel_motors(0,0)
-                time.sleep(1)
-                turn += 1   
+            # print(turn)
+            # # TURN HARD RIGHT
+            # if(np.isnan(edge_right) and turn < 2):
+            #     # print("HARD TURN RIGHT")
+            #     robot.motors.set_wheel_motors(60,60)
+            #     time.sleep(1)
+            #     robot.motors.set_wheel_motors(43,-43)
+            #     time.sleep(2)
+            #     robot.motors.set_wheel_motors(0,0)
+            #     time.sleep(1)
+            #     turn += 1   
 
-            # TURN HARD LEFT
-            elif(np.isnan(edge_right) and turn >= 2):
-            #    print("HARD TURN LEFT")
-                robot.motors.set_wheel_motors(0,0)
-                time.sleep(10)
-                robot.motors.set_wheel_motors(60,60)
-                time.sleep(1)
-                robot.motors.set_wheel_motors(-40,40)
-                time.sleep(2)
-                turn += 1   
+            # # TURN HARD LEFT
+            # elif(np.isnan(edge_right) and turn >= 2):
+            # #    print("HARD TURN LEFT")
+            #     robot.motors.set_wheel_motors(0,0)
+            #     time.sleep(10)
+            #     robot.motors.set_wheel_motors(60,60)
+            #     time.sleep(1)
+            #     robot.motors.set_wheel_motors(-40,40)
+            #     time.sleep(2)
+            #     turn += 1   
 
 
 if __name__ == "__main__":

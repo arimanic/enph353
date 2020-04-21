@@ -20,6 +20,8 @@ BINARY_DATA_PATH = "/home/fizzer/enph353/vision/data/binary"
 BINARY_MODEL_PATH = "/home/fizzer/enph353/vision/training/binary" + version + ".h5"
 BINARY_WEIGHTS_PATH = "/home/fizzer/enph353/vision/training/binary" + version + ".ckpt"
 
+OUTFILE_PATH = "/home/fizzer/enph353/out.txt"
+
 
 # Params
 MIN_IMAGE_SIZE = 8000

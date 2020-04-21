@@ -141,38 +141,25 @@ def findPlates(cv_bgr_img):
             # Save good image sets
             chunked_pairs.append(unlabeled_pair)
 
-    for pair in chunked_pairs:
-        for key, value in pair.items():
-            i=0
-            for img in value:
-                i = i+1
-                cv2.imshow(key + "{}".format(i), img*255)
+    for pair in corrected_pairs:
+        cv2.imshow("plate1", pair[0])
+        cv2.imshow("plate2", pair[1])
 
+    # for pair in chunked_pairs:
+    #     cv2.imwrite("/home/fizzer/enph353/full.png", cv_rgb_img)
+    #     for key, value in pair.items():
+    #         i=0
+    #         for img in value:
+    #             i = i+1
+    #             cv2.imshow(key + "{}".format(i), img*255)
+    #             cv2.imwrite("/home/fizzer/enph353/{}_crop{}.png".format(key,i), img*255)
+
+    cv2.imshow("Image window", cv_rgb_img) 
+        
     cv2.waitKey(3)
 
     return chunked_pairs
-    ## Plate reading CNNs
-    letterClassifier = Classifier("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    letterClassifier.loadWeights(LETTER_WEIGHTS_PATH)
 
-    numberClassifier = Classifier("0123456789")
-    numberClassifier.loadWeights(NUMBER_WEIGHTS_PATH)
-
-    binaryClassifier = Classifier("01")
-    binaryClassifier.loadWeights(BINARY_WEIGHTS_PATH)
-
-   
-    # # Pad each letter to be the right size for the cnn
-    for pair in chunked_pairs:
-        print(readSpot(pair["spot"], binaryClassifier, numberClassifier))
-        print(readPlate(pair["plate"], letterClassifier, numberClassifier))
-
-
-
-    # Main camera display
-    cv2.imshow("Image window", cv_rgb_img)     
-
-    return chunked_pairs
 
 
 def checkSize(idx, contours):

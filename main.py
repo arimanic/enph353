@@ -15,6 +15,8 @@ from keras import backend
 from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
+import time
+
 
 from constants import *
 import vision
@@ -40,8 +42,6 @@ def callback(data):
             spot = vision.readSpot(pair["spot"], binaryClassifier, numberClassifier)
             plate = vision.readPlate(pair["plate"], letterClassifier, numberClassifier)
 
-
-            print(spot + " " + plate)
             if spot not in results:
                 results[spot] = Counter()
 
@@ -54,11 +54,11 @@ def callback(data):
 
     #pub.publish(move)
 
-    print({k : v.most_common(1)[0][0] for k,v in results.items()})
 
-    # Show the Camera Feed
-    cv2.imshow("Image window", cv_image)
-    cv2.waitKey(3)
+    if int(time.time() * 10) % 100 == 0:
+        print("Plates Found:")
+        print({k : v.most_common(1)[0][0] for k,v in results.items()})
+
     
 def driver():
 

@@ -7,6 +7,20 @@ import numpy as np
 import cv2
 import cv_bridge
 
+from keras import layers
+from keras import models
+from keras import optimizers
+from keras.utils import plot_model
+from keras import backend
+from keras.utils import to_categorical
+from keras.callbacks import ModelCheckpoint, EarlyStopping
+
+
+from constants import *
+import vision
+from classifier import Classifier
+from collections import Counter
+
 def callback(data):
 
     bridge = cv_bridge.CvBridge()
@@ -17,21 +31,30 @@ def callback(data):
     except cv_bridge.CvBridgeError as e:
         print(e)
 
-    # Get dimensions and locate the target point
-    height, width, channels = cv_image.shape
+    # Find the plates in the image feed
+    plate_pair = vision.findPlates(cv_image)
 
-    # TODO add license plate detection code here
+    # Classify each character
+    if len(plate_pair) != 0:
+        for pair in plate_pair:
+            spot = vision.readSpot(pair["spot"], binaryClassifier, numberClassifier)
+            plate = vision.readPlate(pair["plate"], letterClassifier, numberClassifier)
+
+
+            print(spot + " " + plate)
+            if spot not in results:
+                results[spot] = Counter()
+
+            # Put the plate count in the results
+            results[spot][plate] += 1
     
-    # Generate a move command based on the robots position relative to the line
-    # TODO Replace this with driving control code
-    move = Twist()
-    move.linear.x = 0.15
-
     # Publish the move command
     pub = rospy.Publisher('/cmd_vel', Twist, 
         queue_size=1)
 
-    pub.publish(move)
+    #pub.publish(move)
+
+    print({k : v.most_common(1)[0][0] for k,v in results.items()})
 
     # Show the Camera Feed
     cv2.imshow("Image window", cv_image)
@@ -54,6 +77,17 @@ def driver():
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
+
+letterClassifier = Classifier("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+letterClassifier.loadWeights(LETTER_WEIGHTS_PATH)
+
+numberClassifier = Classifier("0123456789")
+numberClassifier.loadWeights(NUMBER_WEIGHTS_PATH)
+
+binaryClassifier = Classifier('01')
+binaryClassifier.loadWeights(BINARY_WEIGHTS_PATH)
+
+results = dict()
 
 driver()
 

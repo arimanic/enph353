@@ -9,6 +9,10 @@ from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 from transform import four_point_transform
 from scipy.signal import convolve2d, find_peaks
 
+import os
+
+from constants import *
+from classifier import Classifier
 
 def findPlates(cv_bgr_img):
     
@@ -21,7 +25,7 @@ def findPlates(cv_bgr_img):
     # Correct value of HSV
     cv_hsv_img[:,:,2] = 255
     
-    # Define rangees to filter
+    # Define ranges to filter
     light_blue = (0,200,255)
     dark_blue = (40,230,255)
 
@@ -43,11 +47,10 @@ def findPlates(cv_bgr_img):
     mask = cv2.GaussianBlur(mask, (5,5), 1)
 
     # Use the mask to find car contours
-    im2, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     # Search for child contours. Group pairings that have the same parent
     plate_pairs = list()    
-
     if hierarchy is not None:
         for parent in hierarchy[0]:
             plate_pair = list()
@@ -77,8 +80,6 @@ def findPlates(cv_bgr_img):
                 if len(plate_pair) == 2:
                     plate_pairs.append(plate_pair)
                 
-    #cv2.drawContours(cv_rgb_img, contours, -1, (0,255,0), 3)   
-
      
     ## Image persepctive transform
     corrected_pairs = list()
@@ -98,26 +99,15 @@ def findPlates(cv_bgr_img):
         if aspectRatio(plate1) < 1.4 or aspectRatio(plate2) < 1.4:
             continue
 
-        # Resize the images to a known size
-        #width = 600 #px
-        #height = 300 #px
-
-        # Resize images
-        #plate1 = cv2.resize(plate1, (width,height), interpolation=cv2.INTER_CUBIC)
-        #plate2 = cv2.resize(plate2, (width,height), interpolation=cv2.INTER_CUBIC)
-
-
         # Threshold the images to improve contrast
         plate1 = cv2.cvtColor(plate1, cv2.COLOR_RGB2GRAY)
         plate2 = cv2.cvtColor(plate2, cv2.COLOR_RGB2GRAY) 
-        
+
         _, plate1 = cv2.threshold(plate1, 70, 255, cv2.THRESH_BINARY)
         _, plate2 = cv2.threshold(plate2, 70, 255, cv2.THRESH_BINARY)
 
 
-        #plate1 = cv2.erode(plate1, np.ones((3,3)))
-        #plate2 = cv2.erode(plate2, np.ones((7,7)))
-        
+
         corrected_pair.append(plate1)
         corrected_pair.append(plate2)
         corrected_pairs.append(corrected_pair)
@@ -145,31 +135,44 @@ def findPlates(cv_bgr_img):
 
         # Sometimes there are errors in the chunking. If the lengths dont match
         # up to what they should be ignore the set of images
-        if len(unlabeled_pair["spot"]) != 3 or len(unlabeled_pair["plate"]) != 4:
+        if len(unlabeled_pair["spot"]) != 3 or len(unlabeled_pair["plate"]) != 4: #TODO change 2 to 3
             continue
         else:
             # Save good image sets
             chunked_pairs.append(unlabeled_pair)
 
-
-
-    ## Plate reading CNN
-    # Pad each letter to be the right size for the cnn
-    # label each letter
-
-    # Main camera display
-    cv2.imshow("Image window", cv_rgb_img)
-
-    # Show subwindows of all detected plates
-    
     for pair in chunked_pairs:
         for key, value in pair.items():
             i=0
             for img in value:
                 i = i+1
-                cv2.imshow(key + "{}".format(i), img)
+                cv2.imshow(key + "{}".format(i), img*255)
 
     cv2.waitKey(3)
+
+    return chunked_pairs
+    ## Plate reading CNNs
+    letterClassifier = Classifier("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+    letterClassifier.loadWeights(LETTER_WEIGHTS_PATH)
+
+    numberClassifier = Classifier("0123456789")
+    numberClassifier.loadWeights(NUMBER_WEIGHTS_PATH)
+
+    binaryClassifier = Classifier("01")
+    binaryClassifier.loadWeights(BINARY_WEIGHTS_PATH)
+
+   
+    # # Pad each letter to be the right size for the cnn
+    for pair in chunked_pairs:
+        print(readSpot(pair["spot"], binaryClassifier, numberClassifier))
+        print(readPlate(pair["plate"], letterClassifier, numberClassifier))
+
+
+
+    # Main camera display
+    cv2.imshow("Image window", cv_rgb_img)     
+
+    return chunked_pairs
 
 
 def checkSize(idx, contours):
@@ -184,7 +187,7 @@ def checkSize(idx, contours):
 
     #print(width/height)
 
-    if float(width)/float(height) > 1.1 and width*height > 700:
+    if float(width)/float(height) > 1.1 and width*height > MIN_IMAGE_SIZE:
         return (True, child_bound)
     else:
         return (False, None)
@@ -247,19 +250,65 @@ def getChars(img):
 
     height, width = img.shape
 
+    img = removeBars(img)
+
     # This operation is a fast way of getting the convolution response of a vertical line
     response = np.sum(img, axis=0)/ height
 
     # Find the peaks of the convolution response and use them to crop letters.
-    peaks = find_peaks(response, 220, plateau_size=1)
+    peaks = find_peaks(response, 240, plateau_size=1)
 
     crops = list()
-    for i in range(len(peaks[0]) - 1):
-        left = peaks[1]['right_edges'][i]
-        right = peaks[1]['left_edges'][i+1]
+    for i in range(len(peaks[0]) - 1): 
+        left = peaks[1]['right_edges'][i] - 1
+        right = peaks[1]['left_edges'][i+1] + 1
         crops.append(img[:,left:right])
 
-    return crops
+    # Resize the images
+    resized_crops = list()
+    for img in crops:
+        img = img/255
+        img = cv2.resize(img, (INPUT_WIDTH,INPUT_HEIGHT))
+        resized_crops.append(img.reshape(INPUT_HEIGHT, INPUT_WIDTH,1))
+
+    return np.array(resized_crops)
+
+def getModel():
+    json_file = open('/home/fizzer/enph353/vision/model.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    conv_model = model_from_json(loaded_model_json)
+
+    # Create a callback to save a checkpoint file after each epoch
+    checkpoint_path = "/home/fizzer/enph353/vision/training/cp.ckpt"
+    checkpoint_dir = os.path.join(os.getcwd(), checkpoint_path)
+
+    conv_model.load_weights(checkpoint_path)    
+
+    return conv_model
+
+def removeBars(img):
+
+    height, width = img.shape
+
+    # This operation is a fast way of getting the convolution response of a horizontal line
+    response = np.sum(img, axis=1)/ width
+
+    # Mark every row with a low response
+    to_remove = response < 100
+
+    # Change all marked rows to be all white
+    img[to_remove,:] = 255
+
+    return img
+
+def readPlate(plate_imgs, letter_cnn, number_cnn):
+    letters = plate_imgs[0:2]
+    numbers = plate_imgs[2:4]
+    return letter_cnn.predict(letters) + number_cnn.predict(numbers)
+
+def readSpot(spot_imgs, binary_cnn, number_cnn):
+    return "P" + binary_cnn.predict(spot_imgs[1:2]) + number_cnn.predict(spot_imgs[2:3])
 
 
 #img = cv2.imread('gy2.png')
